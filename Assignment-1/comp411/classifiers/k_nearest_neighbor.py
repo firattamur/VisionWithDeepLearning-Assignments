@@ -2,6 +2,7 @@ from builtins import range
 from builtins import object
 import numpy as np
 from past.builtins import xrange
+from tqdm import tqdm
 
 
 class KNearestNeighbor(object):
@@ -17,9 +18,9 @@ class KNearestNeighbor(object):
 
         Inputs:
         - X: A numpy array of shape (num_train, D) containing the training data
-          consisting of num_train samples each of dimension D.
+            consisting of num_train samples each of dimension D.
         - y: A numpy array of shape (N,) containing the training labels, where
-             y[i] is the label for X[i].
+            y[i] is the label for X[i].
         """
         self.X_train = X
         self.y_train = y
@@ -30,14 +31,14 @@ class KNearestNeighbor(object):
 
         Inputs:
         - X: A numpy array of shape (num_test, D) containing test data consisting
-             of num_test samples each of dimension D.
+            of num_test samples each of dimension D.
         - k: The number of nearest neighbors that vote for the predicted labels.
         - num_loops: Determines which implementation to use to compute distances
-          between training points and testing points.
+            between training points and testing points.
 
         Returns:
         - y: A numpy array of shape (num_test,) containing predicted labels for the
-          test data, where y[i] is the predicted label for the test point X[i].
+            test data, where y[i] is the predicted label for the test point X[i].
         """
         if num_loops == 0:
             if distfn == 'L2':
@@ -70,13 +71,14 @@ class KNearestNeighbor(object):
 
         Returns:
         - dists: A numpy array of shape (num_test, num_train) where dists[i, j]
-          is the Euclidean distance between the ith test point and the jth training
-          point.
+            is the Euclidean distance between the ith test point and the jth training
+            point.
         """
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in range(num_test):
+        for i in tqdm(range(num_test)):
+
             for j in range(num_train):
                 #####################################################################
                 # TODO:                                                             #
@@ -86,7 +88,29 @@ class KNearestNeighbor(object):
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-                pass
+                # l2 distance
+                # sum((x - y) ** 2) ** (1/2)
+
+                # get ith test data
+                test_i = X[i]
+
+                # get jth train data
+                train_j = self.X_train[j]
+
+                # subtract X - Y
+                subtracted = test_i - train_j
+
+                # square of subtraction
+                squared = np.power(subtracted, 2)
+
+                # sum of squares values
+                sum_squared = np.sum(squared)
+
+                # square root
+                square_root = np.power(sum_squared, 0.5)
+
+                # set distance
+                dists[i][j] = square_root
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -101,7 +125,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in range(num_test):
+        for i in tqdm(range(num_test)):
             #######################################################################
             # TODO:                                                               #
             # Compute the l2 distance between the ith test point and all training #
@@ -110,7 +134,35 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            # l2 distance
+            # sum((x - y) ** 2) ** (1/2)
+
+            # get ith test data
+            # shape = (1, features)
+            test_i = X[i]
+
+            # subtract test_i from all train data matrix
+            # shape = (train_num, features)
+            subtracted = self.X_train - test_i
+
+            # square of subtraction
+            # shape = (train_num, features)
+            squared = np.power(subtracted, 2)
+
+            # sum of squares values
+            # shape = (train_num, 1)
+            sum_squared = np.sum(squared, axis=1)
+
+            # square root
+            # shape = (train_num, 1)
+            square_root = np.power(sum_squared, 0.5)
+
+            # reshape (train_num, 1) to (1, train_num)
+            square_root_reshaped = square_root.reshape(1, -1)
+
+            # set distance
+            # shape = (test_num, train_num)
+            dists[i] = square_root_reshaped
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -140,7 +192,49 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # l2 distance
+        # sum((x - y) ** 2) ** (1/2)
+        # efficient way 
+        # num_feat = self.X_train.shape[1]
+    
+        # X_train_tranpose = self.X_train.T
+        # X_test_traponse  = X.T
+        
+        # # repeate X_train cols by number of X_test
+        # X_train_repeated = np.repeat(X_train_tranpose, num_test, axis=1)
+
+        # # repeated whole X_test matrix
+        # X_test_repeated = np.tile(X_test_traponse, num_train)
+
+        # # substract X_test from X_train
+        # sub = X_train_repeated - X_test_repeated
+
+        # # square substraction
+        # sub_squared = np.power(sub, 2)
+
+        # # sum of squareds
+        # sub_squared_sum = np.sum(sub_squared, axis=0)
+
+        # # square root of sum
+        # sub_squared_sum_root = np.power(sub_squared_sum, 0.5)
+
+        # # reshape into (num_train, num_feat)
+        # sub_squared_sum_root = sub_squared_sum_root.reshape(num_train, num_feat)
+
+        # # take transpose to react distances
+        # dists = sub_squared_sum_root.T
+
+        # because column of matrix repeats the first solution was slow.
+        # searching for faster answer we found that:
+        # (x - y) ** 2 = x**2 - 2xy + y**2
+
+        # X_train_square = np.sum(np.square(self.X_train), axis=1)
+        # X_test_square  = np.sum(np.square(X), axis=1)
+        # two_X_train_X_test = 2 * (X @ self.X_train.T)
+
+        # dists = X_test_square.reshape(-1, 1) - two_X_train_X_test + X_train_square.reshape(1, -1)
+
+        dists = np.sqrt(np.sum(X**2, axis=1).reshape(num_test, 1) + np.sum(self.X_train**2, axis=1) - 2 * X.dot(self.X_train.T))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -156,13 +250,13 @@ class KNearestNeighbor(object):
 
         Returns:
         - dists: A numpy array of shape (num_test, num_train) where dists[i, j]
-          is the Euclidean distance between the ith test point and the jth training
-          point.
+            is the Euclidean distance between the ith test point and the jth training
+            point.
         """
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in range(num_test):
+        for i in tqdm(range(num_test)):
             for j in range(num_train):
                 #####################################################################
                 # TODO:                                                             #
@@ -172,7 +266,27 @@ class KNearestNeighbor(object):
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-                pass
+                # l1 distance
+                # abs(x - y)
+
+                # get ith test data
+                test_i = X[i]
+
+                # get jth train data
+                train_j = self.X_train[j]
+
+                # subtract X - Y
+                subtracted = test_i - train_j
+
+                # absulate of subtraction
+                absolute = np.abs(subtracted)
+
+                # sum of absoluate values
+                sum_absolute = np.sum(absolute)
+
+                # set distance
+                dists[i][j] = sum_absolute
+
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -187,7 +301,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in range(num_test):
+        for i in tqdm(range(num_test)):
             #######################################################################
             # TODO:                                                               #
             # Compute the l1 distance between the ith test point and all training #
@@ -196,7 +310,32 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+                        # l2 distance
+            # sum((x - y) ** 2) ** (1/2)
+
+            # get ith test data
+            # shape = (1, features)
+            test_i = X[i]
+
+            # subtract test_i from all train data matrix
+            # shape = (train_num, features)
+            subtracted = self.X_train - test_i
+
+            # square of subtraction
+            # shape = (train_num, features)
+            absolute = np.abs(subtracted)
+
+            # sum of squares values
+            # shape = (train_num, 1)
+            sum_absolute = np.sum(absolute, axis=1)
+
+            # square root
+            # shape = (train_num, 1)
+            sum_absolute_reshaped = sum_absolute.reshape(1, -1)
+
+            # set distance
+            # shape = (test_num, train_num)
+            dists[i] = sum_absolute_reshaped
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -226,8 +365,9 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # dists = np.abs(np.sum(self.X_train.T, axis=0) - np.sum(X.T, axis=0).reshape(-1, 1))
 
+        dists = np.sqrt(np.sum(X**2, axis=1).reshape(num_test, 1) + np.sum(self.X_train**2, axis=1) - 2 * X.dot(self.X_train.T))
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -238,15 +378,15 @@ class KNearestNeighbor(object):
 
         Inputs:
         - dists: A numpy array of shape (num_test, num_train) where dists[i, j]
-          gives the distance betwen the ith test point and the jth training point.
+            gives the distance betwen the ith test point and the jth training point.
 
         Returns:
         - y: A numpy array of shape (num_test,) containing predicted labels for the
-          test data, where y[i] is the predicted label for the test point X[i].
+            test data, where y[i] is the predicted label for the test point X[i].
         """
         num_test = dists.shape[0]
         y_pred = np.zeros(num_test)
-        for i in range(num_test):
+        for i in tqdm(range(num_test)):
             # A list of length k storing the labels of the k nearest neighbors to
             # the ith test point.
             closest_y = []
@@ -259,7 +399,14 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            # sorts distances and return indices
+            closests = np.argsort(dists[i, :])
+
+            # get k closest data point indices
+            k_closest_indices = closests[:k]
+
+            # get labels fromt closest train points
+            closest_y = self.y_train[k_closest_indices] 
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
@@ -271,7 +418,7 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            y_pred[i] = np.bincount(closest_y).argmax()
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
