@@ -70,22 +70,20 @@ def softmax_loss_naive(W, X, y, reg, regtype='L2'):
 
     # add regularization loss
     if regtype == "L1":
-      loss += reg * np.sum(np.abs(W))
+        loss += reg * np.sum(np.abs(W))
 
-      # derivative of |w|
-      #  d|w|     {  1      w > 0
-      # ------ =  { 
-      #  |w|      { -1      w < 0
-      # 
-
-      dw = np.ones(W.shape)
-      dw[ W < 0 ] = -1
-
-      dW += dw
+          # derivative of |w|
+          #  d|w|     {  1      w > 0
+          # ------ =  { 
+          #  |w|      { -1      w < 0
+          # 
+        dw = np.ones(W.shape)
+        dw[ W < 0 ] = -1
+        dW += dw
 
     else:
-      loss += reg * np.sum(W * W)
-      dW   += 2 * reg * W
+        loss += reg * np.sum(W * W)
+        dW   += 2 * reg * W
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -153,7 +151,7 @@ def softmax_loss_vectorized(W, X, y, reg, regtype='L2'):
     else:
 
       # l2 regularization
-      loss += reg * np.sum(np.multiply(W, W))
+      loss += reg * np.sum(W * W)
       dW   += 2 * reg * W
 
 

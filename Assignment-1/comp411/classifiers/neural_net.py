@@ -146,9 +146,9 @@ class ThreeLayerNet(object):
         loss /= N
 
         # apply regularization to loss
-        loss += reg * np.sum(np.multiply(W1, W1)) 
-        loss += reg * np.sum(np.multiply(W2, W2)) 
-        loss += reg * np.sum(np.multiply(W3, W3))
+        loss += reg * np.sum(W1 * W1)
+        loss += reg * np.sum(W2 * W2)
+        loss += reg * np.sum(W3 * W3)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -249,7 +249,7 @@ class ThreeLayerNet(object):
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
             # find random indices from number of training samples
-            rand_indices = np.random.choice(num_train, batch_size)
+            rand_indices = np.random.choice(num_train, batch_size, replace=True)
 
             # get batch data from X and y
             X_batch = X[rand_indices]
@@ -328,8 +328,8 @@ class ThreeLayerNet(object):
         z2 = np.dot(a1, self.params["W2"]) + self.params["b2"]
         a2 = self.relu(z2)
 
-        z3 = np.dot(a2, self.params["W3"]) + self.params["b3"]
-        y_pred = np.argmax(z3, axis=1)
+        scores = np.dot(a2, self.params["W3"]) + self.params["b3"]
+        y_pred = np.argmax(scores, axis=1)
     
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
