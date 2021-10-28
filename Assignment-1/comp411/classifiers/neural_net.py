@@ -47,6 +47,13 @@ class ThreeLayerNet(object):
         self.params['W3'] = std * np.random.randn(hidden_size, output_size)
         self.params['b3'] = np.zeros(output_size)
 
+    def relu(self, x):
+        """
+        ReLU activation function.
+        """
+        return np.maximum(0, x)
+
+
     def loss(self, X, y=None, reg=0.0):
         """
         Compute the loss and gradients for a three layer fully connected neural
@@ -85,23 +92,17 @@ class ThreeLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        def relu(x):
-          """
-          ReLU activation function.
-          """
-          return np.maximum(0, x)
-
         # X -> (N, D), W1 -> (D, H) -> (N, D) * (D, H) -> (N, H) + (H, ) -> (N, H)
         z1 = np.dot(X, W1) + b1
 
         # relu -> z1
-        a1 = relu(z1)
+        a1 = self.relu(z1)
         
         # layer_1 -> (N, H), W2 -> (H, H) -> (N, H) + (H, ) -> (N, H)
         z2 = np.dot(a1, W2) + b2
 
         # relu -> z2
-        a2 = relu(z2)
+        a2 = self.relu(z2)
 
         # layer_2 -> (N, H), W2 -> (H, C) -> (N, C) + (C, ) -> (N, C)
         scores = np.dot(a2, W3) + b3
@@ -257,7 +258,7 @@ class ThreeLayerNet(object):
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
             # Compute loss and gradients using the current minibatch
-            loss, grads = self.loss(X_batch, y=y_batch, reg=reg)
+            loss, grads = self.loss(X=X_batch, y=y_batch, reg=reg)
             loss_history.append(loss)
 
             #########################################################################
@@ -321,11 +322,14 @@ class ThreeLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        layer_1 = np.dot(X, self.params["W1"]) + self.params["b1"]
-        layer_2 = np.dot(layer_1, self.params["W2"]) + self.params["b2"]
-        layer_3 = np.dot(layer_2, self.params["W3"]) + self.params["b3"]
+        z1 = np.dot(X, self.params["W1"]) + self.params["b1"]
+        a1 = self.relu(z1)
 
-        y_pred = np.argmax(layer_3, axis=1)
+        z2 = np.dot(a1, self.params["W2"]) + self.params["b2"]
+        a2 = self.relu(z2)
+
+        z3 = np.dot(a2, self.params["W3"]) + self.params["b3"]
+        y_pred = np.argmax(z3, axis=1)
     
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
