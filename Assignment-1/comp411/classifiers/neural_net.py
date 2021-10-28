@@ -85,7 +85,26 @@ class ThreeLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        def relu(x):
+          """
+          ReLU activation function.
+          """
+          return np.maximum(0, x)
+
+        # X -> (N, D), W1 -> (D, H) -> (N, D) * (D, H) -> (N, H) + (H, ) -> (N, H)
+        z1 = np.dot(X, W1) + b1
+
+        # relu -> z1
+        a1 = relu(z1)
+        
+        # layer_1 -> (N, H), W2 -> (H, H) -> (N, H) + (H, ) -> (N, H)
+        z2 = np.dot(a1, W2) + b2
+
+        # relu -> z2
+        a2 = relu(z2)
+
+        # layer_2 -> (N, H), W2 -> (H, C) -> (N, C) + (C, ) -> (N, C)
+        scores = np.dot(a2, W3) + b3
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -103,7 +122,32 @@ class ThreeLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # subtract max from scores for numerical stability.
+        # shape of scores (N, C) max of each data point -> (N, 1)
+        scores -= np.max(scores, axis=1, keepdims=True)
+
+        # we need to find probabilities for each class by softmax formula
+        # softmax: exp(y[true]) / sum(exp(y))
+        
+        scores_exp = np.exp(scores)
+        scores_exp_sum = np.sum(scores_exp, axis = 1, keepdims = True)
+
+        # all scores_exp for each data and class, scores_exp_sum for each data point
+        class_probs = scores_exp / scores_exp_sum
+
+        # find loss with exp(y[true]) / sum(exp(y))
+        loss = -np.log(class_probs[range(N), y])
+
+        # sum of each loss data point
+        loss = np.sum(loss, axis=0)
+
+        # average loss by train data number
+        loss /= N
+
+        # apply regularization to loss
+        loss += reg * np.sum(np.multiply(W1, W1)) 
+        loss += reg * np.sum(np.multiply(W2, W2)) 
+        loss += reg * np.sum(np.multiply(W3, W3))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -116,7 +160,49 @@ class ThreeLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # layer_3 = np.dot(layer_2, W2) + b3 -> (N, H) * (H, C) + (H, ) => (N, C)
+        # W3.shape = (H, C)
+        dscores = class_probs
+
+        # dW(i)/dx(c) = x(c) - 1 (if c = y[i])
+        dscores[range(N), y] -= 1
+
+        # normalize over the N data points
+        dscores /= N
+
+        # layer_3 -> (N, H), scores_probs -> (N, C) -> (H, N) @ (N, C) => (H, C)
+        # scores = np.dot(a2, W3) + b3
+        # dl/dw3 = dl/scores * dscores/dw3
+        dW3 = np.dot(np.transpose(a2), dscores)
+        dW3 += 2 * reg * W3
+
+        # gradient of bias
+        db3 = np.sum(dscores, axis=0)
+
+        # find derivate of layer_2 respect to softmax
+        da2 = np.dot(dscores, np.transpose(W3))
+        da2[a2 == 0] = 0
+
+        # find grad for dW2
+        dW2 = np.dot(np.transpose(a1), da2)
+        dW2 += 2 * reg * W2
+
+        # find grad for db2
+        db2 = np.sum(da2, axis=0)
+
+        # find derivative of layer_1 respec to layer_2
+        # layer_2: (N, H), dW2: (H, H) -> (N, H)
+        da1 = np.dot(da2, np.transpose(W2))
+        da1[a1 == 0] = 0
+
+        # find grad for dW1
+        dW1 = np.dot(np.transpose(X), da1)
+        dW1 += 2 * reg * W1
+
+        # find grad for db2
+        db1 = np.sum(da1, axis=0)
+
+        grads = {'W1': dW1, 'b1': db1, 'W2': dW2, 'b2': db2, 'W3': dW3, 'b3': db3}
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -161,7 +247,12 @@ class ThreeLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            # find random indices from number of training samples
+            rand_indices = np.random.choice(num_train, batch_size)
+
+            # get batch data from X and y
+            X_batch = X[rand_indices]
+            y_batch = y[rand_indices]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -177,7 +268,14 @@ class ThreeLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            self.params['W1'] -= learning_rate * grads['W1']
+            self.params['b1'] -= learning_rate * grads['b1']
+
+            self.params['W2'] -= learning_rate * grads['W2']
+            self.params['b2'] -= learning_rate * grads['b2']
+
+            self.params['W3'] -= learning_rate * grads['W3']
+            self.params['b3'] -= learning_rate * grads['b3']
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -223,8 +321,12 @@ class ThreeLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        layer_1 = np.dot(X, self.params["W1"]) + self.params["b1"]
+        layer_2 = np.dot(layer_1, self.params["W2"]) + self.params["b2"]
+        layer_3 = np.dot(layer_2, self.params["W3"]) + self.params["b3"]
 
+        y_pred = np.argmax(layer_3, axis=1)
+    
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         return y_pred

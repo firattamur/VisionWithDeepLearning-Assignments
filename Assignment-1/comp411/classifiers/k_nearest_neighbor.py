@@ -2,7 +2,6 @@ from builtins import range
 from builtins import object
 import numpy as np
 from past.builtins import xrange
-from tqdm import tqdm
 
 
 class KNearestNeighbor(object):
@@ -77,7 +76,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in tqdm(range(num_test)):
+        for i in range(num_test):
 
             for j in range(num_train):
                 #####################################################################
@@ -125,7 +124,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in tqdm(range(num_test)):
+        for i in range(num_test):
             #######################################################################
             # TODO:                                                               #
             # Compute the l2 distance between the ith test point and all training #
@@ -256,7 +255,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in tqdm(range(num_test)):
+        for i in range(num_test):
             for j in range(num_train):
                 #####################################################################
                 # TODO:                                                             #
@@ -301,7 +300,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
-        for i in tqdm(range(num_test)):
+        for i in range(num_test):
             #######################################################################
             # TODO:                                                               #
             # Compute the l1 distance between the ith test point and all training #
@@ -365,9 +364,16 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        # dists = np.abs(np.sum(self.X_train.T, axis=0) - np.sum(X.T, axis=0).reshape(-1, 1))
+        # working but really slow in high in dimensions because of a lot of repeating
+        # dists = np.sum(np.abs(np.repeat(self.X_train.T, X.shape[0], axis=1) - np.tile(X.T, self.X_train.shape[0])), axis=0).reshape(self.X_train.shape[0], -1).T
 
-        dists = np.sqrt(np.sum(X**2, axis=1).reshape(num_test, 1) + np.sum(self.X_train**2, axis=1) - 2 * X.dot(self.X_train.T))
+        # version 2 faster than first one
+        # dists = np.abs(self.X_train.flatten() - np.tile(X, self.X_train.shape[0])).reshape(-1, self.X_train.shape[0] * X.shape[0], self.X_train.shape[1]).sum(axis=2).reshape(X.shape[0], self.X_train.shape[0])
+        # dists = np.abs(X.flatten() - np.tile(self.X_train, X.shape[0])).reshape(-1, self.X_train.shape[0] * X.shape[0], self.X_train.shape[1]).sum(axis=2).reshape(self.X_train.shape[0], X.shape[0]).T
+        
+        # fastest one
+        dists = np.abs(self.X_train[:, np.newaxis] - X).sum(axis=-1).T
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -386,7 +392,7 @@ class KNearestNeighbor(object):
         """
         num_test = dists.shape[0]
         y_pred = np.zeros(num_test)
-        for i in tqdm(range(num_test)):
+        for i in range(num_test):
             # A list of length k storing the labels of the k nearest neighbors to
             # the ith test point.
             closest_y = []
