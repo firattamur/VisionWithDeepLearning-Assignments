@@ -27,7 +27,19 @@ def affine_forward(x, w, b):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x_reshaped = x.reshape(x.shape[0], -1)
+        
+    Nx, Dx = x_reshaped.shape
+    
+    Dw, Mw = w.shape
+    
+    Mb     = b.shape[0]
+    
+    # simple dimension check
+    assert Dx == Dw, "D must be equal for x and w!"
+    assert Mw == Mb, "M must be equal for w and b!"
+    
+    out = np.dot(x_reshaped, w) + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -60,9 +72,28 @@ def affine_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+    x_shape    = x.shape
+    x_reshaped = x.reshape(x.shape[0], -1)
+        
+    Nx, Dx = x_reshaped.shape
+    
+    Dw, Mw = w.shape
+    
+    Mb     = b.shape[0]
+    
+    # simple dimension check
+    assert Dx == Dw, "D must be equal for x and w!"
+    assert Mw == Mb, "M must be equal for w and b!"
+    
+    # dL/dx = dL/dout * dout/dx -> dout * w
+    dx = np.dot(dout, np.transpose(w))
+    dx = dx.reshape(x_shape)
 
+    # dL/dw = dL/dout * dout/dw -> dout * x
+    dw = np.dot(np.transpose(x_reshaped), dout)
 
-    pass
+    # dL/db = dL/dout * dout/db -> dout * 1
+    db = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -88,7 +119,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(x, 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -115,7 +146,9 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # dL/dx = dL/dout * dout/dx -> dout * (1 if x > 0 else 0)
+    dx = np.copy(dout)
+    dx[x <= 0] = 0
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -146,7 +179,9 @@ def leaky_relu_forward(x, lrelu_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # not copying is big big mistake do not forget this
+    out = np.copy(x)
+    out[x <= 0] = out[x <= 0] * alpha
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -176,9 +211,8 @@ def leaky_relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-
-
-    pass
+    dx = np.copy(dout)
+    dx[x <= 0] = dx[x <= 0] * alpha
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -218,7 +252,7 @@ def dropout_forward(x, dropout_param):
         np.random.seed(dropout_param['seed'])
 
     mask = None
-    out = None
+    out  = None
 
     if mode == 'train':
         #######################################################################
@@ -227,8 +261,8 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-
-        pass
+        mask = (np.random.rand(*x.shape) > p) * 1
+        out  = x * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -240,7 +274,7 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out = x
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -271,7 +305,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dx = dout * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -320,16 +354,82 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+    # get convolution parameters
+    pad = conv_param["pad"]
+    stride = conv_param["stride"]
+    
+    # check dimensions
+    Nx, Cx, Hx, Wx = x.shape
+    Fw, Cw, Hw, Ww = w.shape
+    Fb             = b.shape[0]
 
+    # tests
+    assert Cx == Cw,  "Channel dimension must be equal for x and w!"
+    assert Fw == Fb,  "Filter count must be equal for w and b!"
 
+    # calculate output dimension
+    Hout = 1 + (Hx + 2 * pad - Hw) / stride
+    Wout = 1 + (Wx + 2 * pad - Ww) / stride
 
+    # padding x with 0
+    # because we have 4D tensor (ax0, ax1, ax2, ax3) 
+    # but we want to pad only axes ax2 and ax3
+    # we need to set padding width 0 for ax0 and ax1
+    # and padding with pad for ax2, ax3
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, ), (pad, pad)), mode='constant')
 
+    Nx_pad, Cx_pad, Hx_pad, Wx_pad = x_padded.shape
 
+    assert Nx_pad == Nx, "Nx is changed after padding!"
+    assert Cx_pad == Cx, "Cx is changed after padding"
 
+    """
+    Here, I am following notes from class.
 
+    Process for convolution will be:
 
+    X: 
 
-    pass
+      [x1*  x2*  x3  x4 ]
+      [x5*  x6*  x7  x8 ]
+      [x9  x10 x11 x12]
+      [x13 x14 x15 x16]
+
+    convert X:
+
+      [x1 x2 ...]
+      [x2 x3 ...]
+      [x5 x6 ...]
+      [x6 x7 ...]
+
+    w: 
+
+      [w1 w2]
+      [w3 w4] 
+
+    convert w to : 
+
+      [w1]
+      [w2]
+      [w3]
+      [w4]
+
+    """
+
+    # convert filter to (count, filter)
+    w_reshaped = w.reshape(Fw, -1)
+
+    for i in range(Nx):
+
+      x_reshape = np.zeros((Cw * Hw * Ww, Hout * Wout))
+      x_col = 0
+
+      for h in range(0, Hx_pad - Hw + 1, stride):
+        for w in range(0, Wx_pad - Ww + 1, stride):
+          x_reshape[:, x_col] = x_padded[i, :, h:h+Hw, w:w+Ww].reshape(Cw * Hw * Ww)
+          x_col += 1
+
+      out[i] = (np.transpose(x_reshape).dot(w_reshaped) + b.reshape(Fb, 1)).reshape(Fw, Hout, Wout)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -418,13 +518,34 @@ def max_pool_forward_naive(x, pool_param):
     # TODO: Implement the max-pooling forward pass                            #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    Nx, Cx, Hx, Wx = x.shape
 
+    # get parameters for pooling
+    stride = pool_param["stride"]
+    Hp     = pool_param["pool_height"]
+    Wp     = pool_param["pool_width"]
 
+    # calculate result output dimension
+    Hout = 1 + (Hx - Hp) / stride
+    Wout = 1 + (Wx - Wp) / stride
 
+    # create empty output array
+    out = np.zeros((Nx, Cx, Hout, Wout))
 
+    # for each data point in batch
+    for i in range(Nx):
 
+      x_reshape = np.zeros((Cx, Hout * Wout))
+      x_col = 0
 
-    pass
+      for h in range(0, Hx - Hp + 1, stride):
+        for w in range(0, Wx - Wp + 1, stride):
+          pool = x[i, :, h:h+Hp, w:w+Wp].reshape(Cx, Hp * Wp)
+          x_reshape[:, x_col] = pool.max(axis=1)
+
+          x_col += 1
+
+      out[i] = x_reshape.reshape(Cx, Hout, Wout)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -450,13 +571,47 @@ def max_pool_backward_naive(dout, cache):
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, pool_param = cache
 
+    Nout, Cout, Hout, Wout = dout.shape
+    Nx, Cx, Hx, Wx = x.shape
 
+    # check dimensions
+    assert Nout == Nx, "Nout, Nx must be equal!"
+    assert Cout == Cx, "Cout, Cx must be equal!"
 
+    stride = pool_param["stride"]
 
+    Hp = pool_param["pool_height"]
+    Wp = pool_param["pool_width"]
 
-    pass
+    dx = np.zeros(x.shape)
 
+    for i in range(Nout):
+
+      dout_i = dout[i].reshape[Cx, Hout * Wout]
+      dout_count = 0
+
+      for h in range(0, Hx - Hp + 1, stride):
+        for w in range(0, Wx - Wp + 1, stride):
+          
+          # we need to find max indices in pooling
+          # because we will only allow these indices to have gradients
+          pool = x[i, :, h:h+Hp, w:w+Wp].reshape(Cx, Hp * Wp)
+          max_indices = pool.argmax(axis=1)
+
+          dout_w = dout_i[:, dout_count]
+          dout_count += 1
+
+          # create gradients matrix for filter
+          dpool = np.zeros(pool.shape)
+
+          # pass gradients to only elements with max values
+          dpool[np.arange(Cx), max_indices] = dout_w
+
+          # update dx gradient with pool gradients
+          dx[i, :, h:h+Hp, w:w+Wp] += dpool.reshape(Cx, Hp, Wp)
+          
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

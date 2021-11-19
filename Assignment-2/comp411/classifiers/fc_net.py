@@ -24,7 +24,7 @@ class ThreeLayerNet(object):
     """
 
     def __init__(self, input_dim=3*32*32, hidden_dim=(64, 32), num_classes=10,
-                 weight_scale=1e-3, reg=0.0, alpha=1e-3):
+                weight_scale=1e-3, reg=0.0, alpha=1e-3):
         """
         Initialize a new network.
 
@@ -54,10 +54,37 @@ class ThreeLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        """
+        Dimension calculations:
+      
+        input_dim = 3 * 32 * 32
+        hidden1_dim = 64
+        hidden2_dim = 32
+        output_dim = 10
 
+        W1: (input_dim, hidden1_dim)
+        b1: (hidden1_dim)
+        
+        W2: (hidden1_dim, hidden2_dim)
+        b2: (hidden2_dim, )
 
+        W3: (hidden2_dim, output_dim)
+        b3: (output_dim, )
+        """
 
-        pass
+        hidden1_dim = hidden_dim[0]
+        hidden2_dim = hidden_dim[1]
+        output_dim  = num_classes
+
+        # initialize weights and biases
+        self.params["W1"] = np.random.normal(loc=0.0, scale=weight_scale, size=(input_dim, hidden1_dim))
+        self.params["b1"] = np.zeros(hidden1_dim)
+
+        self.params["W2"] = np.random.normal(loc=0.0, scale=weight_scale, size=(hidden1_dim, hidden2_dim))
+        self.params["b2"] = np.zeros(hidden2_dim)
+
+        self.params["W3"] = np.random.normal(loc=0.0, scale=weight_scale, size=(hidden2_dim, output_dim))
+        self.params["b3"] = np.zeros(output_dim)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -91,11 +118,15 @@ class ThreeLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        if y is not None:
+          Nx = X.shape[0]
+          Ny = y.shape[0]
 
+          assert Nx == Ny, "Nx, Ny must be equal!"
 
-
-
-        pass
+        Z1,     Z1_cache    = affine_lrelu_forward(X,  self.params["W1"], self.params["b1"], lrelu_param={"alpha": self.alpha})
+        Z2,     Z2_cache    = affine_lrelu_forward(Z1, self.params["W2"], self.params["b2"], lrelu_param={"alpha": self.alpha})
+        scores, score_cache = affine_lrelu_forward(Z2, self.params["W3"], self.params["b3"], lrelu_param={"alpha": self.alpha})
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -119,11 +150,27 @@ class ThreeLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        # find softmax loss
+        loss, softloss_grad = softmax_loss(scores, y)
 
+        # add regularization loss
+        loss += 0.5 * self.reg * np.sum(np.multiply(self.params["W1"], self.params["W1"]))
+        loss += 0.5 * self.reg * np.sum(np.multiply(self.params["W2"], self.params["W2"]))
+        loss += 0.5 * self.reg * np.sum(np.multiply(self.params["W3"], self.params["W3"]))
 
+        # find gradients from backward pass
+        dscores, dw3, db3 = affine_lrelu_backward(softloss_grad, score_cache)
+        dz2,     dw2, db2 = affine_lrelu_backward(dscores, Z2_cache)
+        dz1,     dw1, db1 = affine_lrelu_backward(dz2, Z1_cache)
 
+        grads["W3"] = dw3 + self.reg * self.params["W3"]
+        grads["b3"] = db3
 
-        pass
+        grads["W2"] = dw2 + self.reg * self.params["W2"]
+        grads["b2"] = db2
+
+        grads["W1"] = dw1 + self.reg * self.params["W1"]
+        grads["b1"] = db1
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
