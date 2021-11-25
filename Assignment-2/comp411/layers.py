@@ -355,7 +355,7 @@ def conv_forward_naive(x, w, b, conv_param):
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     # get convolution parameters
-    pad = conv_param["pad"]
+    pad    = conv_param["pad"]
     stride = conv_param["stride"]
     
     # check dimensions
@@ -363,20 +363,34 @@ def conv_forward_naive(x, w, b, conv_param):
     Fw, Cw, Hw, Ww = w.shape
     Fb             = b.shape[0]
 
+    # print for debugging
+    # print(f"x.shape: {x.shape}")
+    # print(f"w.shape: {w.shape}")
+    # print(f"b.shape: {b.shape}")
+
     # tests
     assert Cx == Cw,  "Channel dimension must be equal for x and w!"
     assert Fw == Fb,  "Filter count must be equal for w and b!"
 
     # calculate output dimension
-    Hout = 1 + (Hx + 2 * pad - Hw) / stride
-    Wout = 1 + (Wx + 2 * pad - Ww) / stride
+    Hout = 1 + int((Hx + 2 * pad - Hw) / stride)
+    Wout = 1 + int((Wx + 2 * pad - Ww) / stride)
 
+    # initialize out matrix
+    out = np.zeros((Nx, Fw, Hout, Wout))
+
+    # print for debugging
+    # print(f"(Hout, Wout): {(Hout, Wout)}")
+    
     # padding x with 0
     # because we have 4D tensor (ax0, ax1, ax2, ax3) 
     # but we want to pad only axes ax2 and ax3
     # we need to set padding width 0 for ax0 and ax1
     # and padding with pad for ax2, ax3
-    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, ), (pad, pad)), mode='constant')
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+
+    # print for debugging
+    # print(f"x_padded.shape: {x_padded.shape}")
 
     Nx_pad, Cx_pad, Hx_pad, Wx_pad = x_padded.shape
 
@@ -416,20 +430,26 @@ def conv_forward_naive(x, w, b, conv_param):
 
     """
 
-    # convert filter to (count, filter)
+    # convert filter to (count, all_filter_weights)
     w_reshaped = w.reshape(Fw, -1)
+
+    # print for debugging
+    # print(f"w_shaped.shape: {w_reshaped.shape}")
 
     for i in range(Nx):
 
       x_reshape = np.zeros((Cw * Hw * Ww, Hout * Wout))
       x_col = 0
 
-      for h in range(0, Hx_pad - Hw + 1, stride):
-        for w in range(0, Wx_pad - Ww + 1, stride):
-          x_reshape[:, x_col] = x_padded[i, :, h:h+Hw, w:w+Ww].reshape(Cw * Hw * Ww)
+      # print for debugging
+      # print(f"x_reshape.shape: {x_reshape.shape}")
+
+      for h_H in range(0, Hx_pad - Hw + 1, stride):
+        for w_W in range(0, Wx_pad - Ww + 1, stride):
+          x_reshape[:, x_col] = x_padded[i, :, h_H:h_H+Hw, w_W:w_W+Ww].reshape(Cw * Hw * Ww)
           x_col += 1
 
-      out[i] = (np.transpose(x_reshape).dot(w_reshaped) + b.reshape(Fb, 1)).reshape(Fw, Hout, Wout)
+      out[i] = (np.dot(w_reshaped, x_reshape) + b.reshape(Fb, 1)).reshape(Fw, Hout, Wout)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -526,8 +546,8 @@ def max_pool_forward_naive(x, pool_param):
     Wp     = pool_param["pool_width"]
 
     # calculate result output dimension
-    Hout = 1 + (Hx - Hp) / stride
-    Wout = 1 + (Wx - Wp) / stride
+    Hout = 1 + int((Hx - Hp) / stride)
+    Wout = 1 + int((Wx - Wp) / stride)
 
     # create empty output array
     out = np.zeros((Nx, Cx, Hout, Wout))
@@ -589,7 +609,7 @@ def max_pool_backward_naive(dout, cache):
 
     for i in range(Nout):
 
-      dout_i = dout[i].reshape[Cx, Hout * Wout]
+      dout_i = dout[i].reshape(Cx, Hout * Wout)
       dout_count = 0
 
       for h in range(0, Hx - Hp + 1, stride):

@@ -18,8 +18,8 @@ class ThreeLayerConvNet(object):
     """
 
     def __init__(self, input_dim=(3, 32, 32), num_filters=32, filter_size=7,
-                 hidden_dim=100, num_classes=10, weight_scale=1e-3, reg=0.0,
-                 alpha=1e-3, dtype=np.float32):
+                hidden_dim=100, num_classes=10, weight_scale=1e-3, reg=0.0,
+                alpha=1e-3, dtype=np.float32):
         """
         Initialize a new network.
 
@@ -29,8 +29,7 @@ class ThreeLayerConvNet(object):
         - filter_size: Width/height of filters to use in the convolutional layer
         - hidden_dim: Number of units to use in the fully-connected hidden layer
         - num_classes: Number of scores to produce from the final affine layer.
-        - weight_scale: Scalar giving standard deviation for random initialization
-          of weights.
+        - weight_scale: Scalar giving standard deviation for random initialization of weights.
         - reg: Scalar giving L2 regularization strength
         - alpha: negative slope of Leaky ReLU layers
         - dtype: numpy datatype to use for computation.
@@ -56,12 +55,25 @@ class ThreeLayerConvNet(object):
         # the start of the loss() function to see how that happens.                #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        
+        Cx, Hx, Wx = input_dim
+                
+        self.params["W1"] = np.random.normal(loc=0.0, scale=weight_scale, size=(num_filters, Cx, filter_size, filter_size)).astype(dtype=dtype)
+        self.params["b1"] = np.zeros(num_filters, dtype=dtype)
 
+        # find out dimensions after 2x2 max pooling with stride=2
+        stride = 2
+        Hpool  = 2
+        Wpool  = 2
 
+        Hp = 1 + int((Hx - Hpool) / stride)
+        Wp = 1 + int((Wx - Hpool) / stride)
 
+        self.params["W2"] = np.random.normal(loc=0.0, scale=weight_scale, size=(num_filters * Hp * Wp, hidden_dim)).astype(dtype=dtype)
+        self.params["b2"] = np.zeros(hidden_dim, dtype=dtype)
 
-
-        pass
+        self.params["W3"] = np.random.normal(loc=0.0, scale=weight_scale, size=(hidden_dim, num_classes)).astype(dtype=dtype)
+        self.params["b3"] = np.zeros(num_classes, dtype=dtype)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -89,6 +101,9 @@ class ThreeLayerConvNet(object):
 
         # pass pool_param to the forward pass for the max-pooling layer
         pool_param = {'pool_height': 2, 'pool_width': 2, 'stride': 2}
+        
+        # alpha for leakly relu
+        lrelu_param={"alpha": self.alpha}
 
         scores = None
         ############################################################################
@@ -101,9 +116,9 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-
-
-        pass
+        conv_pool_out, conv_pool_out_cahce = conv_lrelu_pool_forward(X, W1, b1, conv_param, lrelu_param, pool_param)
+        Z2, Z2_cache                       = affine_lrelu_forward(conv_pool_out, W2, b2, lrelu_param)
+        scores, scores_cache               = affine_forward(Z2, W3, b3)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -126,12 +141,23 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        # calculate loss and gradient
+        loss, softmax_grad = softmax_loss(scores, y)
 
+        # do not forget regularization
+        loss += 0.5 * self.reg * np.sum(np.multiply(W1, W1))
+        loss += 0.5 * self.reg * np.sum(np.multiply(W2, W2))
+        loss += 0.5 * self.reg * np.sum(np.multiply(W3, W3))
 
+        # calculate gradients with ackward pass
+        dscores, grads["W3"], grads["b3"] = affine_backward(softmax_grad, scores_cache)
+        dscores, grads["W2"], grads["b2"] = affine_lrelu_backward(dscores, Z2_cache)
+        dscores, grads["W1"], grads["b1"] = conv_lrelu_pool_backward(dscores, conv_pool_out_cahce)
 
-
-
-        pass
+        # do not forget regularization
+        grads["W1"] += self.reg * W1
+        grads["W2"] += self.reg * W2
+        grads["W3"] += self.reg * W3
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
