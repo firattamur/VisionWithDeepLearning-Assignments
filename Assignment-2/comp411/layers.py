@@ -261,7 +261,7 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        mask = (np.random.rand(*x.shape) > p) * 1
+        mask = (np.random.rand(*x.shape) < p) / p
         out  = x * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
